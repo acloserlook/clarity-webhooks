@@ -14,6 +14,10 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@acl/data": "file:../acl-lib/data",
+    "@acl/jwt": "file:../acl-lib/jwt",
+    "@acl/storage": "file:../acl-lib/storage",
+    "@acl/utility": "file:../acl-lib/utility",
     "applicationinsights": "^1.7.4",
     "safe-buffer": "^5.2.0"
   }
