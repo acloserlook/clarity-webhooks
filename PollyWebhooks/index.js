@@ -1,9 +1,10 @@
 const lodash = require("lodash")
 const merge = lodash.merge;
 
+const https = require('follow-redirects/https');
+
 const appInsights = require("applicationinsights");
 appInsights.setup();
-//const client = appInsights.defaultClient;
 
 const AclData = require("@acl/data");
 const aclData = new AclData();
@@ -12,8 +13,13 @@ const AclStorage = require("@acl/storage").AclStorage;
 const aclStorage = new AclStorage();
 
 module.exports = async function (context, req) {
-  context.log(JSON.stringify({context: merge(context, {req:null})})); // Log the context WITHOUT req
-  context.log(JSON.stringify({req}));                                 // Log just req
+  // Log context WITHOUT req
+  const cleanContext = {context: merge(context, {req:null})};
+  context.log(JSON.stringify(cleanContext));
+
+  // Log req WITHOUT the rawBody
+  const cleanReq = {req: merge(req, {rawBody:null})};
+  context.log(JSON.stringify(cleanReq));
 
   // Call the generic logger
   let dbContext = {
@@ -21,10 +27,14 @@ module.exports = async function (context, req) {
     currentUserId: 'EAlle021',
     //token: req.aclAuthentication.token,
   };
+  let dbInput = {
+    requestContext : cleanContext,
+    requestReq : cleanReq
+  };
   try {
-      await aclData.exec({requestContext : merge(context, {req:null}), requestReq : req}, dbContext);
+      await aclData.exec(dbInput, dbContext);
   } catch (err) {
-      console.log(`Error calling ${procedureKey} with input\n${JSON.stringify(input, null, 2)}\n`, err);
+      console.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(dbInput, null, 2)}\n`, err);
       let message = process.env.ENV === 'production' ? 'Error executing request' : err.message;
       context.res = {body: {errored: true, message }};
       return;
@@ -32,75 +42,66 @@ module.exports = async function (context, req) {
 
   // Call the actual handler
   let result = null;
-  dbContext = {
-    procedureKey: '/wh/Polly/Handler',
-    currentUserId: 'EAlle021',
-    //token: req.aclAuthentication.token,
-  };
+  dbContext.procedureKey = '/wh/Polly/Handler';
   try {
-      result = await aclData.exec(req, dbContext);
+      result = await aclData.exec(cleanReq, dbContext);
   } catch (err) {
-      console.log(`Error calling ${procedureKey} with input\n${JSON.stringify(input, null, 2)}\n`, err);
+      console.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(cleanReq, null, 2)}\n`, err);
       let message = process.env.ENV === 'production' ? 'Error executing request' : err.message;
-      result = { errored: true, message };
+      context.res = {body: {errored: true, message }};
+      return;
   }
 
-  if(req && req.body && req.body.derivedData && req.body.derivedData.lastCustomerMessage) {
-    let assets = req.body.derivedData.lastCustomerMessage.assets || [];
-    for (let i=0; i < assets.length; i++) {
-      let { assetId, contentType } = assets[i];
+  if(req && req.body && req.body.conversation && req.body.conversation.messages) {
+    let messages = req.body.conversation.messages;
+    for (let messageIndex = 0; messageIndex < messages.length; messageIndex++)
+    {
+      let message = messages[messageIndex];
+      if (!message.assets || !message.assets.length) continue;
 
-      const https = require('follow-redirects/https');
-      const options = {
-        protocol: 'https:',
-        hostname: 'acloserlook-stage.goquiq.com',
-        //port: 443,
-        path: '/api/v1/assets/' + assetId,
-        method: 'GET',
-        auth: '484fc4c3-bb13-433e-ae39-a35c951db08e:eyJhbGciOiJIUzI1NiIsImtpZCI6ImJhc2ljOjAifQ.eyJ0ZW5hbnQiOiJhY2xvc2VybG9vay1zdGFnZSIsInN1YiI6IjcxNjM3In0.8adQSdgkiMwD4W9aopllyOOHURuMfbTlhXSFytewRok',
-        followAllRedirects: true,
-      };
-      console.log(JSON.stringify(options));
-      https.get(options, (res) => {
-        let fileInfo = {
-          originalFileName: res.headers['filename'],
-          size: res.headers['length'],
-          mimeType: res.headers['content-type'],
-          date: res.headers['last-modified'],
-          encryption: res.headers['x-amz-server-side-encryption'],
-          currentUserId: 'EAlle021',
-          storageContainer: 'polly-files'
+      for (let assetIndex = 0; assetIndex < message.assets.length; assetIndex++){
+        let asset = message.assets[assetIndex];
+
+        const options = {
+          protocol: 'https:',
+          hostname: 'acloserlook-stage.goquiq.com',
+          path: '/api/v1/assets/' + asset.assetId,
+          method: 'GET',
+          auth: '484fc4c3-bb13-433e-ae39-a35c951db08e:eyJhbGciOiJIUzI1NiIsImtpZCI6ImJhc2ljOjAifQ.eyJ0ZW5hbnQiOiJhY2xvc2VybG9vay1zdGFnZSIsInN1YiI6IjcxNjM3In0.8adQSdgkiMwD4W9aopllyOOHURuMfbTlhXSFytewRok',
+          followAllRedirects: true,
         };
-        console.log(JSON.stringify(fileInfo));
-        console.log(`STATUS: ${res.statusCode}`);
-        console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-        aclStorage.saveFile({
-          fileInfo,
-          fileStream: res
-        });
-        res.on('end', () => {
-          console.log('No more data in response.');
-        });
-      });
-      /*
-      const http = require('http');
-      const fs = require('fs');
+        console.log(JSON.stringify(options));
 
-      const file = fs.createWriteStream("file.jpg");
-      const request = http.get("http://i3.ytimg.com/vi/J---aiyznGQ/mqdefault.jpg", function(response) {
-        response.pipe(file);
-      });
-
-      curl
-        -G https://acloserlook-stage.goquiq.com/api/v1/assets/1aaa88d66b18d8ddcbc7da49afba19a7deb4d3b2c77dd9d5cc903e7b5a143953
-        --basic
-        --user 484fc4c3-bb13-433e-ae39-a35c951db08e:eyJhbGciOiJIUzI1NiIsImtpZCI6ImJhc2ljOjAifQ.eyJ0ZW5hbnQiOiJhY2xvc2VybG9vay1zdGFnZSIsInN1YiI6IjcxNjM3In0.8adQSdgkiMwD4W9aopllyOOHURuMfbTlhXSFytewRok
-        -v
-      */
+        https.get(options, (res) => {
+          let fileInfo = {
+            originalFileName: res.headers['filename'],
+            size: res.headers['length'],
+            mimeType: res.headers['content-type'],
+            date: res.headers['last-modified'],
+            encryption: res.headers['x-amz-server-side-encryption'],
+            currentUserId: 'EAlle021',
+            storageContainer: 'polly-files'
+          };
+          console.log(JSON.stringify(fileInfo));
+          console.log(`STATUS: ${res.statusCode}`);
+          console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
+          const savedFileInfos = aclStorage.saveFile({
+            fileInfo,
+            fileStream: res
+          });
+          console.log(JSON.stringify({savedFileInfos}));
+          res.on('end', () => {
+            console.log('No more data in response.');
+          });
+        });
+      }
     }
   }
 
   context.log(JSON.stringify(result));
 
-  context.res = { body: result };
+  context.res = {
+    status: 200,
+    body: result
+  };
 }
