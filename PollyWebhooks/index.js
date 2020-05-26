@@ -14,11 +14,11 @@ const aclStorage = new AclStorage();
 
 module.exports = async function (context, req) {
   // Log context WITHOUT bindings or req
-  const cleanContext = {context: merge({}, context, {bindings:null, req:null})};
+  const cleanContext = { context: merge({}, context, { bindings: null, req: null }) };
   context.log(JSON.stringify(cleanContext));
 
   // Log req WITHOUT the rawBody
-  const cleanReq = {req: merge({}, req, {rawBody:null})};
+  const cleanReq = { req: merge({}, req, { rawBody: null }) };
   context.log(JSON.stringify(cleanReq));
 
   // Call the generic logger
@@ -28,8 +28,8 @@ module.exports = async function (context, req) {
     //token: req.aclAuthentication.token,
   };
   let dbInput = {
-    requestContext : cleanContext,
-    requestReq : cleanReq
+    requestContext: cleanContext,
+    requestReq: cleanReq
   };
   try {
     await aclData.exec(dbInput, dbContext);
@@ -43,20 +43,19 @@ module.exports = async function (context, req) {
   try {
     let result = await aclData.exec(cleanReq.req, dbContext);
     context.log(JSON.stringify(result));
-    context.res = {body: result};
+    context.res = { body: result };
   } catch (err) {
     context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(cleanReq.req, null, 2)}\n`, err);
     throw err;
   }
 
-  if(req && req.body && req.body.conversation && req.body.conversation.messages) {
+  if (req && req.body && req.body.conversation && req.body.conversation.messages) {
     let messages = req.body.conversation.messages;
-    for (let messageIndex = 0; messageIndex < messages.length; messageIndex++)
-    {
+    for (let messageIndex = 0; messageIndex < messages.length; messageIndex++) {
       let message = messages[messageIndex];
       if (!message.assets || !message.assets.length) continue;
 
-      for (let assetIndex = 0; assetIndex < message.assets.length; assetIndex++){
+      for (let assetIndex = 0; assetIndex < message.assets.length; assetIndex++) {
         let asset = message.assets[assetIndex];
 
         const options = {
@@ -86,7 +85,7 @@ module.exports = async function (context, req) {
             fileInfo,
             fileStream: res
           });
-          context.log(JSON.stringify({savedFileInfos}));
+          context.log(JSON.stringify({ savedFileInfos }));
           res.on('end', () => {
             context.log('No more data in response.');
           });
