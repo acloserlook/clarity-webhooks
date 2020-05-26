@@ -13,12 +13,12 @@ const AclStorage = require("@acl/storage").AclStorage;
 const aclStorage = new AclStorage();
 
 module.exports = async function (context, req) {
-  // Log context WITHOUT req
-  const cleanContext = {context: merge(context, {req:null})};
+  // Log context WITHOUT bindings or req
+  const cleanContext = {context: merge({}, context, {bindings:null, req:null})};
   context.log(JSON.stringify(cleanContext));
 
   // Log req WITHOUT the rawBody
-  const cleanReq = {req: merge(req, {rawBody:null})};
+  const cleanReq = {req: merge({}, req, {rawBody:null})};
   context.log(JSON.stringify(cleanReq));
 
   // Call the generic logger
@@ -32,24 +32,21 @@ module.exports = async function (context, req) {
     requestReq : cleanReq
   };
   try {
-      await aclData.exec(dbInput, dbContext);
+    await aclData.exec(dbInput, dbContext);
   } catch (err) {
-      console.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(dbInput, null, 2)}\n`, err);
-      let message = process.env.ENV === 'production' ? 'Error executing request' : err.message;
-      context.res = {body: {errored: true, message }};
-      return;
-    }
+    context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(dbInput, null, 2)}\n`, err);
+    throw err;
+  }
 
   // Call the actual handler
-  let result = null;
   dbContext.procedureKey = '/wh/Polly/Handler';
   try {
-      result = await aclData.exec(cleanReq, dbContext);
+    let result = await aclData.exec(cleanReq.req, dbContext);
+    context.log(JSON.stringify(result));
+    context.res = {body: result};
   } catch (err) {
-      console.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(cleanReq, null, 2)}\n`, err);
-      let message = process.env.ENV === 'production' ? 'Error executing request' : err.message;
-      context.res = {body: {errored: true, message }};
-      return;
+    context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(cleanReq.req, null, 2)}\n`, err);
+    throw err;
   }
 
   if(req && req.body && req.body.conversation && req.body.conversation.messages) {
@@ -70,7 +67,7 @@ module.exports = async function (context, req) {
           auth: '484fc4c3-bb13-433e-ae39-a35c951db08e:eyJhbGciOiJIUzI1NiIsImtpZCI6ImJhc2ljOjAifQ.eyJ0ZW5hbnQiOiJhY2xvc2VybG9vay1zdGFnZSIsInN1YiI6IjcxNjM3In0.8adQSdgkiMwD4W9aopllyOOHURuMfbTlhXSFytewRok',
           followAllRedirects: true,
         };
-        console.log(JSON.stringify(options));
+        context.log(JSON.stringify(options));
 
         https.get(options, (res) => {
           let fileInfo = {
@@ -82,26 +79,19 @@ module.exports = async function (context, req) {
             currentUserId: 'EAlle021',
             storageContainer: 'polly-files'
           };
-          console.log(JSON.stringify(fileInfo));
-          console.log(`STATUS: ${res.statusCode}`);
-          console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
+          context.log(JSON.stringify(fileInfo));
+          context.log(`STATUS: ${res.statusCode}`);
+          context.log(`HEADERS: ${JSON.stringify(res.headers)}`);
           const savedFileInfos = aclStorage.saveFile({
             fileInfo,
             fileStream: res
           });
-          console.log(JSON.stringify({savedFileInfos}));
+          context.log(JSON.stringify({savedFileInfos}));
           res.on('end', () => {
-            console.log('No more data in response.');
+            context.log('No more data in response.');
           });
         });
       }
     }
   }
-
-  context.log(JSON.stringify(result));
-
-  context.res = {
-    status: 200,
-    body: result
-  };
 }
