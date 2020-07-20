@@ -21,7 +21,7 @@
     "applicationinsights": "^1.7.4",
     "azure-functions-core-tools": "^2.7.2508",
     "follow-redirects": "^1.11.0",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "safe-buffer": "^5.2.0"
   }
 }
