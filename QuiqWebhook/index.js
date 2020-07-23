@@ -32,7 +32,10 @@ module.exports = async function (context, req) {
     throw err;
   }
 
-  if(req && req.query && !req.query.isAsync) {
+  if(req && req.query && req.query.isAsync === 1) {
+    context.log('Asynchronous request has been logged for later queueing');
+  }
+  else {
     // Call the synchronous handler (async enqueuing happens in a timer-driven function)
     dbContext.procedureKey = '/quiq/All/ProcessSynchronousCall';
     try {
