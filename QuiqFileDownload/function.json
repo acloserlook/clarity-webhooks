@@ -1,0 +1,11 @@
+{
+  "bindings": [
+    {
+      "schedule": "0 */1 * * * *",
+      "name": "quiqFileDownloadTimer",
+      "type": "timerTrigger",
+      "direction": "in",
+      "runOnStartup": false
+    }
+  ]
+}
