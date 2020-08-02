@@ -7,22 +7,22 @@ const aclData = new AclData();
 const AclStorage = require("@acl/storage").AclStorage;
 const aclStorage = new AclStorage();
 
-const pollyUserId = process.env.POLLY_USERID || null;
+const tppClarityUserId = process.env.TPP_Clarity_USERID || null;
+const tppClarityStorageContainerRoot = process.env.TPP_Clarity_storageContainerRoot;
 
-const https = require('follow-redirects/https');
+const axios = require('axios');
 
-const polly_attachment_hostname = process.env.POLLY_Attachment_Hostname;
-const polly_attachment_userId = process.env.POLLY_Attachment_UserId;
-const polly_attachment_password = process.env.POLLY_Attachment_Password;
-const polly_storage_container = process.env.POLLY_Storage_Container;
+const prod_quiqApiRoot = process.env.prod_quiqApiRoot;
+const prod_quiqApiUsername = process.env.prod_quiqApiUsername;
+const prod_quiqApiPassword = process.env.prod_quiqApiPassword;
 
-module.exports = async function (context, req) {
+async function quiqFileDownload(context, req) {
   // Log context WITHOUT bindings or req
-  const cleanContext = { context: merge({}, context, { bindings: null, req: null }) };
+  const cleanContext = merge({}, context, { bindings: null, req: null });
   context.log(JSON.stringify(cleanContext));
 
   // Log req WITHOUT the rawBody
-  const cleanReq = { req: merge({}, req, { rawBody: null }) };
+  const cleanReq = merge({}, req, { rawBody: null });
   context.log(JSON.stringify(cleanReq));
 
   // Call the dequeuing mechanism in the database
@@ -31,7 +31,7 @@ module.exports = async function (context, req) {
   };
   let dbContext = {
     procedureKey: '/quiq/All/DequeueAsynchronousWork',
-    currentUserId: pollyUserId,
+    currentUserId: tppClarityUserId,
     //token: req.aclAuthentication.token,
   };
   let queueItem = null;
@@ -43,57 +43,62 @@ module.exports = async function (context, req) {
   }
 
   // If we didn't get a queue item back, bail out
-  if(!queueItem || !queueItem.rq || !queueItem.rq.requestQueueId) {
+  if (!queueItem || !queueItem.rq || !queueItem.rq.requestQueueId) {
+    context.log('No queue item to work on');
     context.res = { body: 'No queue item to work on' };
     return;
   }
 
+  context.log(JSON.stringify(queueItem));
+
   // We got a queue item to work on - handle it
-  let queueItemDataInput = queueItem.queueItemDataInput;
+  let queueItemDataInput = queueItem.rq.queueItemDataInput;
   let asset = queueItemDataInput.asset;
   let tppSiteReportId = queueItemDataInput.tppSiteReportId;
 
-  const options = {
-    protocol: 'https:',
-    hostname: polly_attachment_hostname,
-    path: '/api/v1/assets/' + asset.assetId,
-    method: 'GET',
-    auth: polly_attachment_userId + ':' + polly_attachment_password,
-    followAllRedirects: true,
-  };
-  context.log(JSON.stringify(options));
+  context.log(JSON.stringify(queueItemDataInput));
 
-  https.get(options, (res) => {
+  const axiosOptions = {
+    method: 'get',
+    url: prod_quiqApiRoot + 'assets/' + asset.assetId,
+    responseType: 'stream',
+    auth: {
+      username: prod_quiqApiUsername,
+      password:  prod_quiqApiPassword,
+    },
+    maxRedirects: 5,
+  };
+
+  const axiosResult = await axios(
+    axiosOptions
+  ).then(async (res) => {
     let fileInfo = {
-      originalFileName: res.headers['filename'],
-      size: res.headers['length'],
+      originalFileName: res.headers['x-amz-meta-x-original-filename'],
+      size: res.headers['content-length'],
       mimeType: res.headers['content-type'],
       date: res.headers['last-modified'],
       encryption: res.headers['x-amz-server-side-encryption'],
-      currentUserId: pollyUserId,
-      storageContainer: polly_storage_container
+      currentUserId: tppClarityUserId,
+      storageContainer: tppClarityStorageContainerRoot
     };
     context.log(JSON.stringify(fileInfo));
-    context.log(`STATUS: ${res.statusCode}`);
-    context.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-    const savedFileInfos = aclStorage.saveFile({
+
+    await aclStorage.saveFile({
       fileInfo,
-      fileStream: res
-    });
-    context.log(JSON.stringify({ savedFileInfos }));
-    res.on('end', () => {
-      context.log('No more data in response.');
+      fileStream: res.data
+    }).then(async (savedFileInfos) => {
+      context.log(JSON.stringify({ savedFileInfos }));
 
       // Link the FileInfo record to the MessageFile table
       dbInput = {
-        savedFileInfos,
         tppSiteReportId,
         messageId: queueItemDataInput.messageId,
-        assetId: asset.assetId
+        assetId: asset.assetId,
+        filePublicKey: savedFileInfos[0].publicKey,
       };
       dbContext = {
         procedureKey: '/quiq/All/LinkDownloadedFileInfo',
-        currentUserId: pollyUserId,
+        currentUserId: tppClarityUserId,
         //token: req.aclAuthentication.token,
       };
       try {
@@ -101,15 +106,15 @@ module.exports = async function (context, req) {
       } catch (err) {
         context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(dbInput, null, 2)}\n`, err);
         throw err;
-      }    
+      }
 
       // Mark the queue item completed
       dbInput = {
-        requestQueueId: queueItem.requestQueueId
+        requestQueueId: queueItem.rq.requestQueueId
       };
       dbContext = {
         procedureKey: '/quiq/All/CompleteAsynchronousWork',
-        currentUserId: pollyUserId,
+        currentUserId: tppClarityUserId,
         //token: req.aclAuthentication.token,
       };
       try {
@@ -117,7 +122,15 @@ module.exports = async function (context, req) {
       } catch (err) {
         context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(dbInput, null, 2)}\n`, err);
         throw err;
-      }    
-    });
+      }
+    })
+  }).catch((err) => {
+    context.log(JSON.stringify(err));
   });
+
+  // If we got here, there was an item we processed.  See if there's another one available before quitting.
+  context.log('Looking for more work');
+  quiqFileDownload(context, req);
 }
+
+module.exports = quiqFileDownload;

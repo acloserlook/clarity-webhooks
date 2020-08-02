@@ -8,11 +8,11 @@ const pollyUserId = process.env.POLLY_USERID || null;
 
 module.exports = async function (context, req) {
   // Log context WITHOUT bindings or req
-  const cleanContext = { context: merge({}, context, { bindings: null, req: null }) };
+  const cleanContext = merge({}, context, { bindings: null, req: null });
   context.log(JSON.stringify(cleanContext));
 
   // Log req WITHOUT the rawBody
-  const cleanReq = { req: merge({}, req, { rawBody: null }) };
+  const cleanReq = merge({}, req, { rawBody: null });
   context.log(JSON.stringify(cleanReq));
 
   // Call the generic logger
@@ -33,17 +33,26 @@ module.exports = async function (context, req) {
   }
 
   if(req && req.query && req.query.isAsync === 1) {
-    context.log('Asynchronous request has been logged for later queueing');
+    // Call the enqueuing mechanism in the database
+    dbContext.procedureKey = '/quiq/All/EnqueueAsynchronousWork';
+    try {
+      let asyncResult = await aclData.exec(null, dbContext);
+      context.log(JSON.stringify(asyncResult));
+      context.res = { body: asyncResult || '' };
+    } catch (err) {
+      context.log(`Error calling ${dbContext.procedureKey}`, err);
+      throw err;
+    }
   }
   else {
     // Call the synchronous handler (async enqueuing happens in a timer-driven function)
     dbContext.procedureKey = '/quiq/All/ProcessSynchronousCall';
     try {
-      let syncResult = await aclData.exec(cleanReq.req, dbContext);
+      let syncResult = await aclData.exec(cleanReq, dbContext);
       context.log(JSON.stringify(syncResult));
       context.res = { body: syncResult };
     } catch (err) {
-      context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(cleanReq.req, null, 2)}\n`, err);
+      context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(cleanReq, null, 2)}\n`, err);
       throw err;
     }
   }

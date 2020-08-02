@@ -8,11 +8,11 @@ const pollyUserId = process.env.POLLY_USERID || null;
 
 module.exports = async function (context, req) {
   // Log context WITHOUT bindings or req
-  const cleanContext = { context: merge({}, context, { bindings: null, req: null }) };
+  const cleanContext = merge({}, context, { bindings: null, req: null });
   context.log(JSON.stringify(cleanContext));
 
   // Log req WITHOUT the rawBody
-  const cleanReq = { req: merge({}, req, { rawBody: null }) };
+  const cleanReq = merge({}, req, { rawBody: null });
   context.log(JSON.stringify(cleanReq));
 
   // Call the enqueuing mechanism in the database

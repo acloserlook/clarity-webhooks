@@ -6,13 +6,13 @@ const aclData = new AclData();
 
 const pollyUserId = process.env.POLLY_USERID || null;
 
-module.exports = async function (context, req) {
+async function tppWrapupDequeueWorker(context, req) {
   // Log context WITHOUT bindings or req
-  const cleanContext = { context: merge({}, context, { bindings: null, req: null }) };
+  const cleanContext = merge({}, context, { bindings: null, req: null });
   context.log(JSON.stringify(cleanContext));
 
   // Log req WITHOUT the rawBody
-  const cleanReq = { req: merge({}, req, { rawBody: null }) };
+  const cleanReq = merge({}, req, { rawBody: null });
   context.log(JSON.stringify(cleanReq));
 
   // Call the dequeuing mechanism in the database
@@ -54,5 +54,9 @@ module.exports = async function (context, req) {
     throw err;
   }
 
-  // TODO: Enqueue the image downloaders
+  // If we got here, there was an item we processed.  See if there's another one available before quitting.
+  context.log('Looking for more work');
+  tppWrapupDequeueWorker(context, req);
 }
+
+module.exports = tppWrapupDequeueWorker;

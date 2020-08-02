@@ -1,7 +1,7 @@
 {
   "bindings": [
     {
-      "schedule": "0 */1 * * * *",
+      "schedule": "0 */5 * * * *",
       "name": "quiqEnqueueTimer",
       "type": "timerTrigger",
       "direction": "in",
