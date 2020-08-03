@@ -19,11 +19,11 @@ const prod_quiqApiPassword = process.env.prod_quiqApiPassword;
 async function quiqFileDownload(context, req) {
   // Log context WITHOUT bindings or req
   const cleanContext = merge({}, context, { bindings: null, req: null });
-  context.log(JSON.stringify(cleanContext));
+  context.log(cleanContext);
 
   // Log req WITHOUT the rawBody
   const cleanReq = merge({}, req, { rawBody: null });
-  context.log(JSON.stringify(cleanReq));
+  context.log(cleanReq);
 
   // Call the dequeuing mechanism in the database
   let dbInput = {
@@ -49,14 +49,14 @@ async function quiqFileDownload(context, req) {
     return;
   }
 
-  context.log(JSON.stringify(queueItem));
+  context.log(queueItem);
 
   // We got a queue item to work on - handle it
   let queueItemDataInput = queueItem.rq.queueItemDataInput;
   let asset = queueItemDataInput.asset;
   let tppSiteReportId = queueItemDataInput.tppSiteReportId;
 
-  context.log(JSON.stringify(queueItemDataInput));
+  context.log(queueItemDataInput);
 
   const axiosOptions = {
     method: 'get',
@@ -81,13 +81,13 @@ async function quiqFileDownload(context, req) {
       currentUserId: tppClarityUserId,
       storageContainer: tppClarityStorageContainerRoot
     };
-    context.log(JSON.stringify(fileInfo));
+    context.log(fileInfo);
 
     await aclStorage.saveFile({
       fileInfo,
       fileStream: res.data
     }).then(async (savedFileInfos) => {
-      context.log(JSON.stringify({ savedFileInfos }));
+      context.log(savedFileInfos);
 
       // Link the FileInfo record to the MessageFile table
       dbInput = {
@@ -125,7 +125,7 @@ async function quiqFileDownload(context, req) {
       }
     })
   }).catch((err) => {
-    context.log(JSON.stringify(err));
+    context.log(err);
   });
 
   // If we got here, there was an item we processed.  See if there's another one available before quitting.

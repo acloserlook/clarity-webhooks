@@ -9,11 +9,11 @@ const pollyUserId = process.env.POLLY_USERID || null;
 module.exports = async function (context, req) {
   // Log context WITHOUT bindings or req
   const cleanContext = merge({}, context, { bindings: null, req: null });
-  context.log(JSON.stringify(cleanContext));
+  context.log(cleanContext);
 
   // Log req WITHOUT the rawBody
   const cleanReq = merge({}, req, { rawBody: null });
-  context.log(JSON.stringify(cleanReq));
+  context.log(cleanReq);
 
   // Call the enqueuing mechanism in the database
   let dbContext = {
@@ -23,7 +23,7 @@ module.exports = async function (context, req) {
   };
   try {
     let asyncResult = await aclData.exec(null, dbContext);
-    context.log(JSON.stringify(asyncResult));
+    context.log(asyncResult);
   } catch (err) {
     context.log(`Error calling ${dbContext.procedureKey}`, err);
     throw err;

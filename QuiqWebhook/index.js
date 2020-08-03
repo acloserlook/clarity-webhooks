@@ -9,11 +9,11 @@ const pollyUserId = process.env.POLLY_USERID || null;
 module.exports = async function (context, req) {
   // Log context WITHOUT bindings or req
   const cleanContext = merge({}, context, { bindings: null, req: null });
-  context.log(JSON.stringify(cleanContext));
+  context.log(cleanContext);
 
   // Log req WITHOUT the rawBody
   const cleanReq = merge({}, req, { rawBody: null });
-  context.log(JSON.stringify(cleanReq));
+  context.log(cleanReq);
 
   // Call the generic logger
   let dbContext = {
@@ -37,7 +37,7 @@ module.exports = async function (context, req) {
     dbContext.procedureKey = '/quiq/All/EnqueueAsynchronousWork';
     try {
       let asyncResult = await aclData.exec(null, dbContext);
-      context.log(JSON.stringify(asyncResult));
+      context.log(asyncResult);
       context.res = { body: asyncResult || '' };
     } catch (err) {
       context.log(`Error calling ${dbContext.procedureKey}`, err);
@@ -49,7 +49,7 @@ module.exports = async function (context, req) {
     dbContext.procedureKey = '/quiq/All/ProcessSynchronousCall';
     try {
       let syncResult = await aclData.exec(cleanReq, dbContext);
-      context.log(JSON.stringify(syncResult));
+      context.log(syncResult);
       context.res = { body: syncResult };
     } catch (err) {
       context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(cleanReq, null, 2)}\n`, err);

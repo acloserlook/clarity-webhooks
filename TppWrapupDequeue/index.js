@@ -9,11 +9,11 @@ const pollyUserId = process.env.POLLY_USERID || null;
 async function tppWrapupDequeueWorker(context, req) {
   // Log context WITHOUT bindings or req
   const cleanContext = merge({}, context, { bindings: null, req: null });
-  context.log(JSON.stringify(cleanContext));
+  context.log(cleanContext);
 
   // Log req WITHOUT the rawBody
   const cleanReq = merge({}, req, { rawBody: null });
-  context.log(JSON.stringify(cleanReq));
+  context.log(cleanReq);
 
   // Call the dequeuing mechanism in the database
   let dbInput = {
