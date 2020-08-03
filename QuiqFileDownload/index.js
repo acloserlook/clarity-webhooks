@@ -55,6 +55,8 @@ async function quiqFileDownload(context, req) {
   let queueItemDataInput = queueItem.rq.queueItemDataInput;
   let asset = queueItemDataInput.asset;
   let tppSiteReportId = queueItemDataInput.tppSiteReportId;
+  let clientId = queueItemDataInput.clientId;
+  let locationId = queueItemDataInput.locationId;
 
   context.log(queueItemDataInput);
 
@@ -69,9 +71,13 @@ async function quiqFileDownload(context, req) {
     maxRedirects: 5,
   };
 
+  context.log(axiosOptions);
+
   const axiosResult = await axios(
     axiosOptions
   ).then(async (res) => {
+    context.log(res.headers);
+
     let fileInfo = {
       originalFileName: res.headers['x-amz-meta-x-original-filename'],
       size: res.headers['content-length'],
@@ -79,7 +85,8 @@ async function quiqFileDownload(context, req) {
       date: res.headers['last-modified'],
       encryption: res.headers['x-amz-server-side-encryption'],
       currentUserId: tppClarityUserId,
-      storageContainer: tppClarityStorageContainerRoot
+      //storageContainer: clientId + '/' + locationId + '/' + tppClarityStorageContainerRoot,
+      storageContainer: tppClarityStorageContainerRoot,
     };
     context.log(fileInfo);
 
