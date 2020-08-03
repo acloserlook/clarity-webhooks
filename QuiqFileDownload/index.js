@@ -85,7 +85,7 @@ async function quiqFileDownload(context, req) {
       date: res.headers['last-modified'],
       encryption: res.headers['x-amz-server-side-encryption'],
       currentUserId: tppClarityUserId,
-      //storageContainer: clientId + '/' + locationId + '/' + tppClarityStorageContainerRoot,
+      storagePath: clientId + '/' + locationId,
       storageContainer: tppClarityStorageContainerRoot,
     };
     context.log(fileInfo);
