@@ -104,7 +104,7 @@ async function quiqFileDownload(context, req) {
         filePublicKey: savedFileInfos[0].publicKey,
       };
       dbContext = {
-        procedureKey: '/quiq/All/LinkDownloadedFileInfo',
+        procedureKey: '/tpp/All/LinkDownloadedFileInfo',
         currentUserId: tppClarityUserId,
         //token: req.aclAuthentication.token,
       };
