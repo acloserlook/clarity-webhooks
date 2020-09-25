@@ -1,6 +1,3 @@
-const lodash = require("lodash")
-const merge = lodash.merge;
-
 const AclData = require("@acl/data");
 const aclData = new AclData();
 
@@ -18,11 +15,11 @@ const prod_quiqApiPassword = process.env.prod_quiqApiPassword;
 
 async function quiqFileDownload(context, req) {
   // Log context WITHOUT bindings or req
-  const cleanContext = merge({}, context, { bindings: null, req: null });
+  const cleanContext = {...context, ...{ bindings: null, req: null }};
   context.log(cleanContext);
 
   // Log req WITHOUT the rawBody
-  const cleanReq = merge({}, req, { rawBody: null });
+  const cleanReq = {...req, ...{ rawBody: null }};
   context.log(cleanReq);
 
   // Call the dequeuing mechanism in the database
