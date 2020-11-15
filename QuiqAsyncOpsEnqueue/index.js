@@ -4,6 +4,9 @@ const aclData = new AclData();
 const pollyUserId = process.env.POLLY_USERID || null;
 
 module.exports = async function (context, req) {
+  context = context || {log: console.log};
+  req = req || {};
+
   // Log context WITHOUT bindings or req
   const cleanContext = {...context, ...{ bindings: null, req: null }};
   context.log(cleanContext);
@@ -23,6 +26,5 @@ module.exports = async function (context, req) {
     context.log(asyncResult);
   } catch (err) {
     context.log(`Error calling ${dbContext.procedureKey}`, err);
-    throw err;
   }
 }

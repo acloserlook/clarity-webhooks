@@ -4,6 +4,9 @@ const aclData = new AclData();
 const pollyUserId = process.env.POLLY_USERID || null;
 
 async function tppWrapupDequeueWorker(context, req) {
+  context = context || {log: console.log};
+  req = req || {};
+
   // Log context WITHOUT bindings or req
   const cleanContext = {...context, ...{ bindings: null, req: null }};
   context.log(cleanContext);
@@ -24,6 +27,7 @@ async function tppWrapupDequeueWorker(context, req) {
   let queueItem = null;
   try {
     queueItem = await aclData.exec(dbInput, dbContext);
+    context.log(queueItem);
   } catch (err) {
     context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(dbInput, null, 2)}\n`, err);
     throw err;
@@ -48,7 +52,6 @@ async function tppWrapupDequeueWorker(context, req) {
     await aclData.exec(dbInput, dbContext);
   } catch (err) {
     context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(dbInput, null, 2)}\n`, err);
-    throw err;
   }
 
   // If we got here, there was an item we processed.  See if there's another one available before quitting.
