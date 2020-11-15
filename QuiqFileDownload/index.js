@@ -14,6 +14,9 @@ const prod_quiqApiUsername = process.env.prod_quiqApiUsername;
 const prod_quiqApiPassword = process.env.prod_quiqApiPassword;
 
 async function quiqFileDownload(context, req) {
+  context = context || {log: console.log};
+  req = req || {};
+
   // Log context WITHOUT bindings or req
   const cleanContext = {...context, ...{ bindings: null, req: null }};
   context.log(cleanContext);
@@ -36,7 +39,7 @@ async function quiqFileDownload(context, req) {
     queueItem = await aclData.exec(dbInput, dbContext);
   } catch (err) {
     context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(dbInput, null, 2)}\n`, err);
-    throw err;
+    return;
   }
 
   // If we didn't get a queue item back, bail out
@@ -109,7 +112,7 @@ async function quiqFileDownload(context, req) {
         await aclData.exec(dbInput, dbContext);
       } catch (err) {
         context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(dbInput, null, 2)}\n`, err);
-        throw err;
+        return;
       }
 
       // Mark the queue item completed
@@ -125,7 +128,7 @@ async function quiqFileDownload(context, req) {
         await aclData.exec(dbInput, dbContext);
       } catch (err) {
         context.log(`Error calling ${dbContext.procedureKey} with input\n${JSON.stringify(dbInput, null, 2)}\n`, err);
-        throw err;
+        return;
       }
     })
   }).catch((err) => {
