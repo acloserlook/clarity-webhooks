@@ -1,7 +1,7 @@
 const AclData = require("@acl/data");
 const aclData = new AclData();
 
-const pollyUserId = process.env.POLLY_USERID || null;
+const quiqUserId = process.env.QUIQ_USERID || null;
 
 module.exports = async function (context, req) {
   // Log context WITHOUT bindings or req
@@ -15,7 +15,7 @@ module.exports = async function (context, req) {
   // Call the generic logger
   let dbContext = {
     procedureKey: '/quiq/All/ReceiveWebhook',
-    currentUserId: pollyUserId,
+    currentUserId: quiqUserId,
     //token: req.aclAuthentication.token,
   };
   let dbInput = {

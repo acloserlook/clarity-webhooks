@@ -1,8 +1,6 @@
 const AclData = require("@acl/data");
 const aclData = new AclData();
 
-const pollyUserId = process.env.POLLY_USERID || null;
-
 const apiCalls = require('./apiCalls');
 
 const last = (array) => {

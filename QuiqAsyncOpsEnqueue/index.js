@@ -1,7 +1,7 @@
 const AclData = require("@acl/data");
 const aclData = new AclData();
 
-const pollyUserId = process.env.POLLY_USERID || null;
+const quiqUserId = process.env.QUIQ_USERID || null;
 
 module.exports = async function (context, req) {
   context = context || {log: console.log};
@@ -18,7 +18,7 @@ module.exports = async function (context, req) {
   // Call the enqueuing mechanism in the database
   let dbContext = {
     procedureKey: '/quiq/All/EnqueueAsynchronousWork',
-    currentUserId: pollyUserId,
+    currentUserId: quiqUserId,
     //token: req.aclAuthentication.token,
   };
   try {

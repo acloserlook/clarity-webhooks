@@ -1,7 +1,7 @@
 const AclData = require("@acl/data");
 const aclData = new AclData();
 
-const pollyUserId = process.env.POLLY_USERID || null;
+const quiqUserId = process.env.QUIQ_USERID || null;
 
 const apiCalls = require('./apiCalls');
 
@@ -40,7 +40,7 @@ const queryCityName = async (logger, conversation, botState) => {
 const processSynchronousDbCall = async (logger, botState) => {
   let dbContext = {
     procedureKey: '/quiq/Location/ProcessSynchronousCall',
-    currentUserId: pollyUserId,
+    currentUserId: quiqUserId,
     //token: req.aclAuthentication.token,
   };
   try {

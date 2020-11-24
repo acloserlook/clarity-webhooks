@@ -4,14 +4,15 @@ const aclData = new AclData();
 const AclStorage = require("@acl/storage").AclStorage;
 const aclStorage = new AclStorage();
 
-const tppClarityUserId = process.env.TPP_Clarity_USERID || null;
-const tppClarityStorageContainerRoot = process.env.TPP_Clarity_storageContainerRoot;
+const quiqUserId = process.env.QUIQ_USERID || null;
+const tppStorageContainerRoot = process.env.STORAGECONTAINERROOT_TPP;
+const capStorageContainerRoot = process.env.STORAGECONTAINERROOT_CAP;
 
 const axios = require('axios');
 
-const prod_quiqApiRoot = process.env.prod_quiqApiRoot;
-const prod_quiqApiUsername = process.env.prod_quiqApiUsername;
-const prod_quiqApiPassword = process.env.prod_quiqApiPassword;
+const quiqApiRoot = process.env.QUIQ_PROD_API_ROOT;
+const quiqApiUsername = process.env.QUIQ_PROD_API_USERNAME;
+const quiqApiPassword = process.env.QUIQ_PROD_API_PASSWORD;
 
 async function quiqFileDownload(context, req) {
   context = context || {log: console.log};
@@ -31,7 +32,7 @@ async function quiqFileDownload(context, req) {
   };
   let dbContext = {
     procedureKey: '/quiq/All/DequeueAsynchronousWork',
-    currentUserId: tppClarityUserId,
+    currentUserId: quiqUserId,
     //token: req.aclAuthentication.token,
   };
   let queueItem = null;
@@ -54,19 +55,20 @@ async function quiqFileDownload(context, req) {
   // We got a queue item to work on - handle it
   let queueItemDataInput = queueItem.rq.queueItemDataInput;
   let asset = queueItemDataInput.asset;
-  let tppSiteReportId = queueItemDataInput.tppSiteReportId;
+  let siteReportId = queueItemDataInput.siteReportId;
   let clientId = queueItemDataInput.clientId;
   let locationId = queueItemDataInput.locationId;
+  let productTypeId = queueItemDataInput.productTypeId;
 
   context.log(queueItemDataInput);
 
   const axiosOptions = {
     method: 'get',
-    url: prod_quiqApiRoot + 'assets/' + asset.assetId,
+    url: quiqApiRoot + 'assets/' + asset.assetId,
     responseType: 'stream',
     auth: {
-      username: prod_quiqApiUsername,
-      password:  prod_quiqApiPassword,
+      username: quiqApiUsername,
+      password:  quiqApiPassword,
     },
     maxRedirects: 5,
   };
@@ -84,9 +86,11 @@ async function quiqFileDownload(context, req) {
       mimeType: res.headers['content-type'],
       date: res.headers['last-modified'],
       encryption: res.headers['x-amz-server-side-encryption'],
-      currentUserId: tppClarityUserId,
+      currentUserId,
       storagePath: clientId + '/' + locationId,
-      storageContainer: tppClarityStorageContainerRoot,
+      storageContainer: (productTypeId === 3)
+        ? capStorageContainerRoot
+        : tppStorageContainerRoot,
     };
     context.log(fileInfo);
 
@@ -98,14 +102,17 @@ async function quiqFileDownload(context, req) {
 
       // Link the FileInfo record to the MessageFile table
       dbInput = {
-        tppSiteReportId,
+        productTypeId,
+        siteReportId,
         messageId: queueItemDataInput.messageId,
         assetId: asset.assetId,
         filePublicKey: savedFileInfos[0].publicKey,
       };
       dbContext = {
-        procedureKey: '/tpp/All/LinkDownloadedFileInfo',
-        currentUserId: tppClarityUserId,
+        procedureKey: (productTypeId === 3)
+          ? '/cap/All/LinkDownloadedFileInfo'
+          : '/tpp/All/LinkDownloadedFileInfo',
+        currentUserId: quiqUserId,
         //token: req.aclAuthentication.token,
       };
       try {
@@ -121,7 +128,7 @@ async function quiqFileDownload(context, req) {
       };
       dbContext = {
         procedureKey: '/quiq/All/CompleteAsynchronousWork',
-        currentUserId: tppClarityUserId,
+        currentUserId: quiqUserId,
         //token: req.aclAuthentication.token,
       };
       try {
