@@ -86,7 +86,7 @@ async function quiqFileDownload(context, req) {
       mimeType: res.headers['content-type'],
       date: res.headers['last-modified'],
       encryption: res.headers['x-amz-server-side-encryption'],
-      currentUserId,
+      currentUserId: quiqUserId,
       storagePath: clientId + '/' + locationId,
       storageContainer: (productTypeId === 3)
         ? capStorageContainerRoot
@@ -102,7 +102,6 @@ async function quiqFileDownload(context, req) {
 
       // Link the FileInfo record to the MessageFile table
       dbInput = {
-        productTypeId,
         siteReportId,
         messageId: queueItemDataInput.messageId,
         assetId: asset.assetId,
