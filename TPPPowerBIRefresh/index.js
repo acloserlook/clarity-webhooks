@@ -51,4 +51,5 @@ const runRefresh = groupId => async datasetId => {
 
 module.exports = async function (context, req) {
   runRefresh('4906b348-a437-49dd-b7c8-a96cdb0ab599')('62acc428-76b4-48f1-be79-448c5d1fca38');
+  runRefresh('4906b348-a437-49dd-b7c8-a96cdb0ab599')('1a4542df-a89b-4fb4-9de4-686bc1c2afd9');
 }            
