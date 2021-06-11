@@ -19,7 +19,7 @@
     "@acl/storage": "file:../acl-lib/storage",
     "@acl/utility": "file:../acl-lib/utility",
     "applicationinsights": "^1.8.7",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "azure-functions-core-tools": "^2.7.2913",
     "node-fetch": "^2.6.1",
     "querystring": "^0.2.0"
